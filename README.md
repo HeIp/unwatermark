@@ -1,7 +1,7 @@
 Unwatermark
 ==============
 
-**Unwatermark** is a Python library for removing watermarks from images, supporting both asynchronous and synchronous operations via the Unwatermark API.
+**Unwatermark** is a Python library for removing watermarks from images, supporting both asynchronous and synchronous operations via the Unwatermark API (Unwatermark.ai).
 
 Installation
 ------------
@@ -26,7 +26,8 @@ Using the `AsyncUnwater` class to remove a watermark asynchronously:
     
     async def main():
         async_unwater = AsyncUnwater()
-        result_url = await async_unwater.remove_watermark("path/to/image.jpg")
+        result = await async_unwater.remove_watermark("path, url or bytes")
+        result_url = result.result.output_image_url[0]
         print(f"Watermark removed image URL: {result_url}")
     
     asyncio.run(main())
@@ -39,14 +40,15 @@ Using the `Unwater` class to remove a watermark synchronously:
     from unwatermark import Unwater
     
     unwater = Unwater()
-    result_url = unwater.remove_watermark("path/to/image.jpg")
+    result = unwater.remove_watermark("path, url or bytes")
+    result_url = result.result.output_image_url[0]
     print(f"Watermark removed image URL: {result_url}")
     
 
 Project Details
 ---------------
 
-*   **Version:** 0.1.0
+*   **Version:** 1.1.0
 *   **Author:** FSystem88
 *   **Author Email:** ivan@fsystem88.ru
 *   **Repository URL:** [GitHub](https://github.com/FSystem88/unwatermark)

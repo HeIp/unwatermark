@@ -8,7 +8,7 @@ Installation
 
 Install the package using pip:
 
-    pip install unwatermark
+    pip install unwatermark -U
 
 Usage
 -----
@@ -26,8 +26,7 @@ Using the `AsyncUnwater` class to remove a watermark asynchronously:
     
     async def main():
         async_unwater = AsyncUnwater()
-        result = await async_unwater.remove_watermark("path, url or bytes")
-        result_url = result.result.output_image_url[0]
+        result_url = await async_unwater.remove_watermark("path, url or bytes")
         print(f"Watermark removed image URL: {result_url}")
     
     asyncio.run(main())
@@ -40,8 +39,7 @@ Using the `Unwater` class to remove a watermark synchronously:
     from unwatermark import Unwater
     
     unwater = Unwater()
-    result = unwater.remove_watermark("path, url or bytes")
-    result_url = result.result.output_image_url[0]
+    result_url = unwater.remove_watermark("path, url or bytes")
     print(f"Watermark removed image URL: {result_url}")
     
 
@@ -52,6 +50,7 @@ Project Details
 *   **Author:** FSystem88
 *   **Author Email:** ivan@fsystem88.ru
 *   **Repository URL:** [GitHub](https://github.com/FSystem88/unwatermark)
+*   **Repository URL:** [GitHub](https://Unwatermark.ai)
 
 Dependencies
 ------------

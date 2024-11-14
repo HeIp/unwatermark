@@ -2,7 +2,6 @@ import httpx
 import os
 from time import sleep
 from typing import Union, Optional
-from models import ResponseData
 
 class Unwater:
     def __init__(self):
@@ -28,16 +27,16 @@ class Unwater:
                 files=files,
                 headers=self.headers_water
             )
-            response_data = ResponseData.parse_obj(response.json())
-            job_id = response_data.result.job_id
+            response_data = response.json()
+            job_id = response_data['result']['job_id']
 
             while True:
                 result = client.get(
                     f"https://api.unwatermark.ai/api/unwatermark/v4/ai-remove-auto/get-job/{job_id}"
                 )
-                status = ResponseData.parse_obj(result.json())
-                if status.result and status.result.output_image_url:
-                    return status
+                status = result.json()
+                if status['result'] is not None:
+                    return status['result']['output_image_url'][0]
                 sleep(1)
 
     def _prepare_files_sync(self, image_input: Union[str, bytes], client: httpx.Client) -> dict:

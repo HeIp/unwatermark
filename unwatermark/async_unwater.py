@@ -1,10 +1,10 @@
+import asyncio
+import aiofiles
 import httpx
 import os
-from asyncio import sleep
 from typing import Union, Optional
-from models import ResponseData
 
-class UnwaterAsync:
+class AsyncUnwater:
     def __init__(self):
         self.headers_water = {
             "accept": "*/*",
@@ -22,26 +22,25 @@ class UnwaterAsync:
 
     async def remove_watermark(self, image_input: Union[str, bytes]) -> Optional[str]:
         async with httpx.AsyncClient(http2=True) as client:
-            files = await self._prepare_files_async(image_input, client)
+            files = await self._prepare_files(image_input, client)
             response = await client.post(
                 "https://api.unwatermark.ai/api/unwatermark/v4/ai-remove-auto/create-job",
                 files=files,
                 headers=self.headers_water
             )
-
-            response_data = ResponseData.parse_obj(response.json())
-            job_id = response_data.result.job_id
+            response_data = response.json()
+            job_id = response_data['result']['job_id']
 
             while True:
                 result = await client.get(
                     f"https://api.unwatermark.ai/api/unwatermark/v4/ai-remove-auto/get-job/{job_id}"
                 )
-                status = ResponseData.parse_obj(result.json())
-                if status.result and status.result.output_image_url:
-                    return status
-                await sleep(1)
+                status = result.json()
+                if status['result'] is not None:
+                    return status['result']['output_image_url'][0]
+                await asyncio.sleep(1)
 
-    async def _prepare_files_async(self, image_input: Union[str, bytes], client: httpx.AsyncClient) -> dict:
+    async def _prepare_files(self, image_input: Union[str, bytes], client: httpx.AsyncClient) -> dict:
         if isinstance(image_input, bytes):
             return {"original_image_file": image_input}
         elif isinstance(image_input, str):
@@ -49,6 +48,7 @@ class UnwaterAsync:
                 response = await client.get(image_input)
                 return {"original_image_file": response.content}
             elif os.path.isfile(image_input):
-                async with await open(image_input, "rb") as f:
-                    return {"original_image_file": await f.read()}
+                async with aiofiles.open(image_input, "rb") as f:
+                    file_content = await f.read()
+                return {"original_image_file": file_content}
         raise ValueError("Invalid input format: must be file path, URL, or bytes.")

@@ -1,4 +1,5 @@
-from .async_unwater import AsyncUnwater
-from .unwater import Unwater
+from unwatermark.async_unwater import AsyncUnwater
+from unwatermark.unwater import Unwater
+from unwatermark.models import Message, Result, ResponseData
 
-__all__ = ["AsyncUnwater", "Unwater"]
+__all__ = ["AsyncUnwater", "Unwater", "Message", "Result", "ResponseData"]

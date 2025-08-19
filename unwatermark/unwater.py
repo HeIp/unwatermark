@@ -15,6 +15,27 @@ class Unwater:
         timeout: int = 60,
         poll_interval: int = 2,
     ) -> ResponseData:
+        """Removes a watermark from an image using the unwatermark.ai service.
+
+        This is a synchronous operation that will block until the job is complete
+        or the timeout is reached.
+
+        Args:
+            image_input: The image to process. Can be a file path (str),
+                a public URL (str), or raw image data (bytes).
+            timeout: The maximum time in seconds to wait for the job to complete.
+                Defaults to 60.
+            poll_interval: The time in seconds to wait between checking the
+                job status. Defaults to 2.
+
+        Returns:
+            A ResponseData object containing the result, including the URL
+            of the unwatermarked image.
+
+        Raises:
+            UnwatermarkError: If the job fails, the API returns an error,
+                or the timeout is exceeded.
+        """
         start_time = time.time()
         with httpx.Client(http2=True) as client:
             files = self._prepare_files_sync(image_input, client)

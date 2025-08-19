@@ -1,43 +1,70 @@
 import httpx
 import os
+import time
 from asyncio import sleep
 import aiofiles
-from typing import Union, Optional
+from typing import Union
 
 from unwatermark.models import ResponseData
 from .common import HEADERS, CREATE_JOB_URL, GET_JOB_URL_TEMPLATE
+from .exceptions import UnwatermarkError
 
 
 class AsyncUnwater:
-    async def remove_watermark(self, image_input: Union[str, bytes]) -> Optional[ResponseData]:
+    async def remove_watermark(
+        self,
+        image_input: Union[str, bytes],
+        timeout: int = 60,
+        poll_interval: int = 2,
+    ) -> ResponseData:
+        start_time = time.time()
         async with httpx.AsyncClient(http2=True) as client:
             files = await self._prepare_files_async(image_input, client)
-            response = await client.post(
-                CREATE_JOB_URL,
-                files=files,
-                headers=HEADERS
-            )
+            try:
+                response = await client.post(
+                    CREATE_JOB_URL, files=files, headers=HEADERS, timeout=10
+                )
+                response.raise_for_status()
+            except httpx.RequestError as e:
+                raise UnwatermarkError(f"Failed to create job: {e}") from e
 
             response_data = ResponseData.parse_obj(response.json())
+            if response_data.code != 0 or not response_data.result or not response_data.result.job_id:
+                raise UnwatermarkError(f"API Error creating job: {response_data.message.en}")
+
             job_id = response_data.result.job_id
 
-            while True:
-                result = await client.get(
-                    GET_JOB_URL_TEMPLATE.format(job_id=job_id)
-                )
-                status = ResponseData.parse_obj(result.json())
+            while time.time() - start_time < timeout:
+                try:
+                    result_response = await client.get(
+                        GET_JOB_URL_TEMPLATE.format(job_id=job_id), timeout=10
+                    )
+                    result_response.raise_for_status()
+                except httpx.RequestError as e:
+                    raise UnwatermarkError(f"Failed to poll job status: {e}") from e
+
+                status = ResponseData.parse_obj(result_response.json())
+                if status.code != 0:
+                    raise UnwatermarkError(f"API Error polling job: {status.message.en}")
+
                 if status.result and status.result.output_image_url:
                     return status
-                await sleep(1)
+                await sleep(poll_interval)
+
+            raise UnwatermarkError(f"Timeout of {timeout}s exceeded while waiting for job {job_id}")
 
     async def _prepare_files_async(self, image_input: Union[str, bytes], client: httpx.AsyncClient) -> dict:
-        if isinstance(image_input, bytes):
-            return {"original_image_file": image_input}
-        elif isinstance(image_input, str):
-            if image_input.startswith("http://") or image_input.startswith("https://"):
-                response = await client.get(image_input)
-                return {"original_image_file": response.content}
-            elif os.path.isfile(image_input):
-                async with aiofiles.open(image_input, "rb") as f:
-                    return {"original_image_file": await f.read()}
-        raise ValueError("Invalid input format: must be file path, URL, or bytes.")
+        try:
+            if isinstance(image_input, bytes):
+                return {"original_image_file": image_input}
+            elif isinstance(image_input, str):
+                if image_input.startswith("http://") or image_input.startswith("https://"):
+                    response = await client.get(image_input)
+                    response.raise_for_status()
+                    return {"original_image_file": response.content}
+                elif os.path.isfile(image_input):
+                    async with aiofiles.open(image_input, "rb") as f:
+                        return {"original_image_file": await f.read()}
+            raise ValueError("Invalid input format: must be file path, URL, or bytes.")
+        except (httpx.RequestError, IOError, ValueError) as e:
+            raise UnwatermarkError(f"Failed to read image input: {e}") from e
